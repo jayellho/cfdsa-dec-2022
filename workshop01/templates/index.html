@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+
+{% block css %}
+  <link href="{{ url_for('static', filename='css/index.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>{{title}}</h1>
+        <img src="{{url_for('static', filename='img/homepage-docker-logo.png')}}" align="middle" />
+    </div>
+{% endblock %}
