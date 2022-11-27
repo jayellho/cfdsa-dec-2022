@@ -1,0 +1,5 @@
+# Flask framework
+Flask==2.2.2
+
+# gunicorn - a lightweight WSGI HTTP server
+gunicorn==20.1.0
