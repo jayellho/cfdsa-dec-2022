@@ -1,0 +1,12 @@
+docker network create mynet
+
+docker volume create data
+
+docker pull stackupiss/northwind-app:v1
+docker tag stackupiss/northwind-app:v1 myapp
+
+docker build -t mydb:v1 .
+
+docker run -d --name mydb -v data:/var/lib/mysql --network mynet mydb:v1
+
+docker run -d -p 

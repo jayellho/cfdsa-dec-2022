@@ -1,0 +1,105 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: osc-hsvc
+  labels:
+    app: minio
+  namespace: osc
+spec:
+  clusterIP: None
+  selector:
+    name: osc-po
+    app: minio
+  ports:
+  - name: minio-data
+    port: 9000
+    targetPort: 9000
+  - name: minio-console
+    port: 9090
+    targetPort: 9090
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: osc-sts
+  labels:
+    name: osc-sts
+    app: minio
+  namespace: osc
+spec:
+  serviceName: osc-hsvc
+  replicas: 4
+  selector:
+    matchLabels:
+      name: osc-po
+      app: minio
+  template:
+    metadata:
+      labels:
+        name: osc-po
+        app: minio
+    spec:
+      initContainers:
+      - name: osc-init-container
+        image: busybox
+        command:
+        - /bin/sh
+        - -c
+        - "chown 1001 /data"
+        volumeMounts:
+        - name: osc-pvc
+          mountPath: /data
+      containers:
+      - name: osc-container
+        env:
+        - name: MINIO_ROOT_USER
+          value: cm9vdHVzZXIK
+        - name: MINIO_ROOT_PASSWORD
+          value: cm9vdHBhc3N3b3JkMTIz
+        image: bitnami/minio:2022.12.12
+        resources:
+          requests:
+            memory: 250Mi
+            cpu: 200m
+        command:
+        - minio
+        - server
+        - --address=:9000
+        - --console-address=:9090
+        - http://osc-sts-{0...3}.osc-hsvc.osc.svc.cluster.local/data
+
+        ports:
+        - containerPort: 9000
+        - containerPort: 9090
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /minio/health/ready
+            port: 9000
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+        # These volume mounts are persistent. Each pod in the Statefulset
+        # gets a volume mounted based on this field.     
+        volumeMounts:
+        - name: osc-pvc
+          mountPath: /data
+  # These are converted to volume claims by the controller
+  # and mounted at the paths mentioned above.
+  volumeClaimTemplates:
+  - metadata:
+      name: osc-pvc
+      labels:
+        name: osc-pvc
+        app: minio
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: do-block-storage-xfs
+      resources:
+        requests:
+          storage: 1Gi
+---

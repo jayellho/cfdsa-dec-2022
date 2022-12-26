@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: osc-cm
+  labels:
+    app: minio
+    name: osc-cm
+  namespace: osc
+data:
+  MINIO_ROOT_USER: rootuser
+  MINIO_ROOT_PASSWORD: rootpassword123

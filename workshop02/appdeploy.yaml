@@ -1,0 +1,104 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bggapp-deploy
+  labels:
+    name: bggapp-deploy
+  namespace: bggns
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      name: app-po
+  template:
+    metadata:
+      name: app-po
+      labels:
+        name: app-po
+    spec:
+      volumes:
+      - name: config-vol
+        configMap:
+          name: config-cm
+      - name: tmp-vol
+        emptyDir: {}
+
+
+      containers:
+      - name: app-container
+        image: stackupiss/bgg-backend:v2
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: BGG_DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: bgg-config
+              key: db_user
+        - name: BGG_DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: bgg-config
+              key: db_host
+        - name: BGG_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bgg-secret
+              key: db_password
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+        volumeMounts:
+        - name: config-vol
+          mountPath: /app/config
+          readOnly: true
+        - name: tmp-vol
+          mountPath: /opt/tmp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bggapp-svc
+  labels:
+    name: bggapp-svc
+  namespace: bggns
+spec:
+  type: ClusterIP
+  selector:
+    name: app-po
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ing
+  labels:
+    name: app-ing
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: app-137.184.251.193.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bggapp-svc
+            port:
+              number: 80
